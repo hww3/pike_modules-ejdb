@@ -9,41 +9,145 @@
 #include "ejdb_config.h"
 #include "util.h"
 
-
-
-/*! @class EJDB
- */
+#if HAVE_TCEJDB_EJDB_H
+#include <tcejdb/ejdb.h>
+#endif /* HAVE_TCEJDB/EJDB_H */
 
 DECLARATIONS
 
-
-PIKEFUN void create(string appname)
+PIKECLASS Collection
 {
+  DECLARATIONS
+  CVAR EJCOLL * coll;
+  PIKEVAR object db;
+  
+  PIKEFUN void create()
+  {
+  
+  }
+  
+  INIT
+  {
+  }
+
+  EXIT
+  {
+    if(THIS->coll)
+        free(THIS->coll);
+    if(THIS->db)
+      free_object(THIS->db);
+    
+  }
+
+}
+
+/*! @class EJDB
+ */
+PIKECLASS EJDB
+{
+
+DECLARATIONS
+CVAR EJDB * jb;
+
+PIKEFUN void create(string dbpath, int flags)
+{
+  static EJDB *jb;
+  jb = ejdbnew();
+  if (!ejdbopen(jb, dbpath->str, flags | (JBOWRITER | JBOCREAT | JBOTRUNC))) {
+    Pike_error("Unable to open database %s", dbpath->str);
+  }
   pop_n_elems(args);
+  
+  THIS->jb = jb;
 }
 
-PIKECLASS foo
+PIKEFUN object get_collection(string name)
+{
+  EJCOLL* coll;
+  
+  coll = ejdbgetcoll(THIS->jb, name);
+  if(!coll)
+  {
+    pop_n_elems(args);
+    push_int(0);
+    return;
+  }
+  else
+  {
+    struct object * c;
+    c = clone_object(Collection_program, 0);
+    OBJ2_COLLECTION(c)->coll = c;
+    OBJ2_COLLECTION(c)->db = this_object();
+    add_ref(OBJ2_COLLECTION(c)->db);
+    pop_n_elems(args);
+    push_object(c);
+    return;
+  }
+}
+
+PIKEFUN object create_collection(string name, int flags)
+{
+  EJCOLL* coll;
+  
+  coll = ejdbcreatecoll(THIS->jb, name, flags);
+  if(!coll)
+  {
+    pop_n_elems(args);
+    push_int(0);
+    return;
+  }
+  else
+  {
+    struct object * c;
+    c = clone_object(Collection_program, 0);
+    OBJ2_COLLECTION(c)->coll = c;
+    OBJ2_COLLECTION(c)->db = this_object();
+    add_ref(OBJ2_COLLECTION(c)->db);
+    pop_n_elems(args);
+    push_object(c);
+    return;
+  }
+}
+INIT
 {
 }
 
-PIKE_MODULE_INIT
+EXIT
 {
-  INIT;
+  if(THIS->jb)
+    ejdbclose(THIS->jb);
 }
 
-PIKE_MODULE_EXIT 
+EXTRA
 {
-  EXIT;
+  add_integer_constant("JBOREADER", JBOREADER, 0);
+  add_integer_constant("JBOWRITER", JBOWRITER, 0);
+  add_integer_constant("JBOCREAT", JBOCREAT, 0);
+  add_integer_constant("JBOTRUNC", JBOTRUNC, 0);
+  add_integer_constant("JBONOLCK", JBONOLCK, 0);
+  add_integer_constant("JBOLCKNB", JBOLCKNB, 0);
+  add_integer_constant("JBOTSYNC", JBOTSYNC, 0);
+  
 }
 
+}
 
 /*! @endclass
  */
 
-/*! @endmodule
- */
 
 /*! @endmodule
  */
 
+/*! @endmodule
+ */
 
+ PIKE_MODULE_INIT
+ {
+   INIT;
+ }
+
+ PIKE_MODULE_EXIT
+ {
+   EXIT;
+ }

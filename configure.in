@@ -4,15 +4,15 @@ AC_INIT(ejdb_config.h.in)
 AC_MODULE_INIT()
 AC_CONFIG_HEADERS(ejdb_config.h)
 
-EJDB_LDFLAGS=`pkg-config --libs gtk+-2.0`
-EJDB_CFLAGS=`pkg-config --cflags gtk+-2.0`
+EJDB_LIBS=`pkg-config --libs tcejdb`
+EJDB_CFLAGS=`pkg-config --cflags tcejdb`
 CPPFLAGS="${CPPFLAGS} ${EJDB_CFLAGS}"
 LDFLAGS="${LDFLAGS} ${EJDB_LIBS}"
 
-CMOD_LIBS=""
-CMOD_FLAGS=""
+CMOD_LIBS="$LDFLAGS"
+CMOD_FLAGS="$CPPFLAGS"
 
-# AC_CHECK_HEADERS(libxml/parser.h)
+AC_CHECK_HEADERS(tcejdb/ejdb.h)
 # AC_CHECK_LIB(xml2, xmlCleanupParser) 
 
 # AC_CHECK_FUNCS(xmlNewDocPI) 
