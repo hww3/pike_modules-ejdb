@@ -1,0 +1,49 @@
+/*! @module Public
+ */
+
+/*! @module EJDB
+ */
+
+#define _GNU_SOURCE
+
+#include "ejdb_config.h"
+#include "util.h"
+
+
+
+/*! @class EJDB
+ */
+
+DECLARATIONS
+
+
+PIKEFUN void create(string appname)
+{
+  pop_n_elems(args);
+}
+
+PIKECLASS foo
+{
+}
+
+PIKE_MODULE_INIT
+{
+  INIT;
+}
+
+PIKE_MODULE_EXIT 
+{
+  EXIT;
+}
+
+
+/*! @endclass
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+

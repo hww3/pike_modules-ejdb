@@ -1,0 +1,24 @@
+# $Id: configure.in,v 1.2 2005-09-22 20:23:20 hww3 Exp $
+AC_INIT(ejdb_config.h.in)
+
+AC_MODULE_INIT()
+AC_CONFIG_HEADERS(ejdb_config.h)
+
+EJDB_LDFLAGS=`pkg-config --libs gtk+-2.0`
+EJDB_CFLAGS=`pkg-config --cflags gtk+-2.0`
+CPPFLAGS="${CPPFLAGS} ${EJDB_CFLAGS}"
+LDFLAGS="${LDFLAGS} ${EJDB_LIBS}"
+
+CMOD_LIBS=""
+CMOD_FLAGS=""
+
+# AC_CHECK_HEADERS(libxml/parser.h)
+# AC_CHECK_LIB(xml2, xmlCleanupParser) 
+
+# AC_CHECK_FUNCS(xmlNewDocPI) 
+
+AC_SUBST(CMOD_CFLAGS) 
+AC_SUBST(CMOD_LIBS)
+
+AC_OUTPUT(Makefile)
+

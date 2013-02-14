@@ -1,0 +1,84 @@
+# $Id: Makefile.in,v 1.3 2006-05-16 19:27:38 hww3 Exp $
+@make_variables@
+VPATH=@srcdir@:@srcdir@/../..:../..
+
+# things we should define.
+
+# the .o files that we need to generate for the module
+# rules will automatically generate these from .c, .cmod, .m and .mmod files.
+OBJS=ejdb.o
+
+# the module directory we put things into. it should be a directory path
+# of .pmod directories, and this must end with a trailing slash.
+MODDIR=Public.pmod/
+
+# the module name the resulting dynamic and/or pike module will be 
+# installed as. note that it's just a module or class name without extension.
+MODNAME=EJDB
+
+# used by the module repository to scan for autodocs. should be the 
+# list of non pike files containing autodoc markup (ie cmod or c files). 
+AUTODOC_SRC_IN=
+
+# the module name note that there is no error checking, so all of these
+# related variables should agree.
+MODULE_NAME=Public.EJDB
+
+# the module name, with periods replaced with underscores. used to 
+# generate the module distribution.
+MODULE_DIR_NAME=Public_EJDB
+
+# need i say more?
+MODULE_LICENSE=GPL
+
+# we shouldn't need to do anything to the rest of the file.
+
+CFLAGS=@CMOD_CFLAGS@
+LDFLAGS=@CMOD_LIBS@
+
+MODULE_LDFLAGS=@LDFLAGS@
+
+CONFIG_HEADERS=@CONFIG_HEADERS@
+
+@dynamic_module_makefile@
+@dependencies@
+
+pmar:  verify
+	mkdir ${MODULE_DIR_NAME}-1.${MIN}
+	mkdir ${MODULE_DIR_NAME}-1.${MIN}/MODULE
+	mkdir ${MODULE_DIR_NAME}-1.${MIN}/SCRIPTS
+	-cp package/*.pike ${MODULE_DIR_NAME}-1.${MIN}/SCRIPTS
+	-cp -rf plib/modules/* ${MODULE_DIR_NAME}-1.${MIN}/MODULE
+	echo "MODULE=${MODULE_NAME}" > ${MODULE_DIR_NAME}-1.${MIN}/METADATA.TXT
+	echo "VERSION=1.${MIN}" >> ${MODULE_DIR_NAME}-1.${MIN}/METADATA.TXT
+	if test x${OBJS} = x ; then \
+	echo "PLATFORM=any/any" >> ${MODULE_DIR_NAME}-1.${MIN}/METADATA.TXT ; \
+	else \
+	echo "CREATING A NON-PLATFORM INDEPENDENT PACKAGE! YOU MUST UPDATE THE PLATFORM VALUE IN METADATA.TXT." ;\
+	fi
+	tar cvf ${MODULE_DIR_NAME}-1.${MIN}.pmar ${MODULE_DIR_NAME}-1.${MIN}
+	rm -rf ${MODULE_DIR_NAME}-1.${MIN}
+
+release_cvs: verify
+	cvs rtag -D now RELEASE_1_${MIN} pike_modules/${MODULE_DIR_NAME}
+	cvs export -d ${MODULE_DIR_NAME}-1.${MIN} -r RELEASE_1_${MIN} pike_modules/${MODULE_DIR_NAME}
+	cd ${MODULE_DIR_NAME}-1.${MIN} && \
+	pike -x module --autoheader && pike -x module --autoconf && \
+	rm -rf autom4*
+	tar cvf ${MODULE_DIR_NAME}-1.${MIN}.tar ${MODULE_DIR_NAME}-1.${MIN}
+	gzip ${MODULE_DIR_NAME}-1.${MIN}.tar
+	rm -rf ${MODULE_DIR_NAME}-1.${MIN}
+	pike upload_module_version.pike ${MODULE_NAME} 1.${MIN} "${MODULE_LICENSE}"
+        
+
+release: verify
+	hg tag -r tip RELEASE_1.${MIN}
+	hg push
+	hg archive -r RELEASE_1.${MIN} ${MODULE_DIR_NAME}-1.${MIN}
+	cd ${MODULE_DIR_NAME}-1.${MIN} && \
+	pike -x module --autoheader && pike -x module --autoconf && \
+	rm -rf autom4*
+	tar cvf ${MODULE_DIR_NAME}-1.${MIN}.tar ${MODULE_DIR_NAME}-1.${MIN}
+	gzip ${MODULE_DIR_NAME}-1.${MIN}.tar
+	rm -rf ${MODULE_DIR_NAME}-1.${MIN}
+	pike upload_module_version.pike ${MODULE_NAME} 1.${MIN} "${MODULE_LICENSE}"
