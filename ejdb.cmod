@@ -9,6 +9,14 @@
 #include "ejdb_config.h"
 #include "util.h"
 
+struct EJCOLL { /**> EJDB Collection. */
+    char *cname; /**> Collection name. */
+    int cnamesz; /**> Collection name length. */
+    void *tdb; /**> Collection TCTDB. */
+    void *jb; /**> Database handle. */
+    void *mmtx; /*> Mutex for method */
+};
+
 #if HAVE_TCEJDB_EJDB_H
 #include <tcejdb/ejdb.h>
 #endif /* HAVE_TCEJDB/EJDB_H */
@@ -28,11 +36,21 @@ PIKECLASS Collection
   DECLARATIONS
   CVAR EJCOLL * coll;
   PIKEVAR object db;
+  PIKEVAR string name;
 
 #define COLL_DB(X) (EJDB *)(OBJ2_DB(X))
   PIKEFUN void create()
   {
 
+  }
+  
+  PIKEFUN string _sprintf(mixed format, mixed bar)
+  {
+    push_text("EJDB.Collection(");
+    push_string(THIS->name);
+    f_add(2);
+    push_text(")");
+    f_add(2);
   }
 
   /*! @decl int delete_bson(string oid)
@@ -360,9 +378,17 @@ PIKEFUN object create_collection(string name, mapping|void opts)
 void push_coll(EJCOLL * coll)
 {
   struct object * c;
+  struct pike_string * name;
   c = clone_object(Collection_program, 0);
+  name = make_shared_binary_string(coll->cname, coll->cnamesz);
+  push_string(name);
+  f_utf8_to_string(1);
+  name = Pike_sp[-1].u.string;
+  add_ref(name);
+  pop_stack();
   OBJ2_COLLECTION(c)->coll = coll;
   OBJ2_COLLECTION(c)->db = this_object();
+  OBJ2_COLLECTION(c)->name = name;
   add_ref(OBJ2_COLLECTION(c)->db);
   push_object(c);
 }
