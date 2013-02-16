@@ -13,6 +13,11 @@
 #include <tcejdb/ejdb.h>
 #endif /* HAVE_TCEJDB/EJDB_H */
 
+extern struct program * EJDB_program;
+
+void throw_ejdb_error(struct object * db);
+EJDB * getdb(struct object * db);
+
 DECLARATIONS
 
 PIKECLASS Collection
@@ -20,12 +25,100 @@ PIKECLASS Collection
   DECLARATIONS
   CVAR EJCOLL * coll;
   PIKEVAR object db;
-  
+
+#define COLL_DB(X) (EJDB *)(OBJ2_DB(X))
   PIKEFUN void create()
   {
-  
+
   }
-  
+
+  PIKEFUN string load_bson(string oid)
+  {
+    bson_oid_t _oid;
+    bson * _bson;
+
+    if(!THIS->coll)
+    {
+      pop_n_elems(args);
+      Pike_error("Collection not initialized properly.\n");
+    }
+
+    if(oid && !oid->len)
+    {
+      pop_n_elems(args);
+      Pike_error("OID cannot be a zero-length string.\n");
+    }
+
+    bson_oid_from_string(&_oid, oid->str);
+
+    if((_bson = ejdbloadbson(THIS->coll, &_oid)))
+    {
+      struct pike_string * bsonStr;
+      bson_print_raw(stdout, bson_data(_bson), 10);
+      bsonStr = make_shared_binary_string(bson_data(_bson), bson_size(_bson));
+     // bson_destroy(&_bson);
+      RETURN bsonStr;
+    }
+    else
+    {
+        int ecode = ejdbecode(getdb(THIS->db)); 
+        printf("ecode: %d\n", ecode);
+        if (ecode != TCESUCCESS) {
+            printf("throwing error.\n");
+            throw_ejdb_error(THIS->db);
+            }
+      pop_stack();
+      push_int(0);
+    }
+  }
+
+  PIKEFUN string save_bson(string bsonval, string|void oid, int|void merge)
+  {
+    bson_oid_t _oid;
+    bson _bson;
+    int _merge = 0;
+
+    if(!THIS->coll)
+    {
+      pop_n_elems(args);
+      Pike_error("Collection not initialized properly.\n");
+    }
+
+    if(oid && !oid->len)
+    {
+      pop_n_elems(args);
+      Pike_error("OID cannot be a zero-length string.\n");
+    }
+    else if(oid)
+    {
+      bson_oid_from_string(&_oid, oid->str);
+    }
+
+    if(merge->type == T_INT)
+    {
+      _merge = merge->u.integer;
+    }
+
+    bson_init_finished_data(&_bson, bsonval->str);
+    bson_print_raw(stdout, bson_data(&_bson), 10);
+    
+    if(ejdbsavebson2(THIS->coll, &_bson, &_oid, merge))
+    {
+      struct pike_string * oidStr;
+      char c[24];
+      bson_oid_to_string((const bson_oid_t *)&_oid, (char *)&c);
+
+      oidStr = make_shared_binary_string(c, strlen(c));
+      //bson_destroy(&_bson);
+      RETURN oidStr;
+    }
+    else
+    {
+      RETURN 0;
+    }
+
+  }
+
   INIT
   {
   }
@@ -36,10 +129,14 @@ PIKECLASS Collection
         free(THIS->coll);
     if(THIS->db)
       free_object(THIS->db);
-    
+
   }
 
 }
+
+/*! @endclass
+ */
+
 
 /*! @class EJDB
  */
@@ -59,13 +156,31 @@ PIKEFUN void create(string dbpath, int flags)
   pop_n_elems(args);
   
   THIS->jb = jb;
+  printf("db: %p\n", THIS->jb);
+}
+
+PIKEFUN int sync()
+{
+   if (!ejdbsyncdb(THIS->jb)) {
+       RETURN ejdbecode(THIS->jb);
+   }
+   else RETURN 0;
+}
+
+
+PIKEFUN int close()
+{
+   if (!ejdbclose(THIS->jb)) {
+       RETURN ejdbecode(THIS->jb);
+   }
+   else RETURN 0;
 }
 
 PIKEFUN object get_collection(string name)
 {
   EJCOLL* coll;
   
-  coll = ejdbgetcoll(THIS->jb, name);
+  coll = ejdbgetcoll(THIS->jb, name->str);
   if(!coll)
   {
     pop_n_elems(args);
@@ -76,7 +191,7 @@ PIKEFUN object get_collection(string name)
   {
     struct object * c;
     c = clone_object(Collection_program, 0);
-    OBJ2_COLLECTION(c)->coll = c;
+    OBJ2_COLLECTION(c)->coll = coll;
     OBJ2_COLLECTION(c)->db = this_object();
     add_ref(OBJ2_COLLECTION(c)->db);
     pop_n_elems(args);
@@ -85,11 +200,12 @@ PIKEFUN object get_collection(string name)
   }
 }
 
-PIKEFUN object create_collection(string name, int flags)
+PIKEFUN object create_collection(string name, mapping|void opts)
 {
   EJCOLL* coll;
+  EJCOLLOPTS _opts;
   
-  coll = ejdbcreatecoll(THIS->jb, name, flags);
+  coll = ejdbcreatecoll(THIS->jb, name->str, &_opts);
   if(!coll)
   {
     pop_n_elems(args);
@@ -100,7 +216,7 @@ PIKEFUN object create_collection(string name, int flags)
   {
     struct object * c;
     c = clone_object(Collection_program, 0);
-    OBJ2_COLLECTION(c)->coll = c;
+    OBJ2_COLLECTION(c)->coll = coll;
     OBJ2_COLLECTION(c)->db = this_object();
     add_ref(OBJ2_COLLECTION(c)->db);
     pop_n_elems(args);
@@ -127,14 +243,12 @@ EXTRA
   add_integer_constant("JBONOLCK", JBONOLCK, 0);
   add_integer_constant("JBOLCKNB", JBOLCKNB, 0);
   add_integer_constant("JBOTSYNC", JBOTSYNC, 0);
-  
 }
 
 }
 
 /*! @endclass
  */
-
 
 /*! @endmodule
  */
@@ -151,3 +265,22 @@ EXTRA
  {
    EXIT;
  }
+
+ EJDB * getdb(struct object * db)
+ {
+    struct EJDB_struct * _db;
+    _db = (OBJ2_EJDB(db));
+    return _db->jb; 
+ }
+
+ void throw_ejdb_error(struct object * db)
+ {
+   EJDB * _db;
+   int ecode;
+   
+   _db = getdb(db);
+   ecode = ejdbecode(_db);
+printf("throwing error!\n");
+   Pike_error(ejdberrmsg(ecode));
+ }
+
