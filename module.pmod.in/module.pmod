@@ -12,7 +12,6 @@ class Collection
   {
     mixed res;
     res = low_find(BSON.toDocument(query, 1));
-    return res;
     foreach(res; int i; mixed e)
     {
       res[i] = BSON.fromDocument(e);

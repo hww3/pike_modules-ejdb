@@ -310,18 +310,21 @@ PIKEFUN int close()
    else RETURN 0;
 }
 
-/*! @decl array(object) get_collections()
+/*! @decl array(string) get_collections()
  */
 PIKEFUN array get_collections()
 {
   TCLIST *colls;
   int i;
+  struct pike_string * cn;
 
   colls = ejdbgetcolls(THIS->jb);
   
   for (i = 0; i < TCLISTNUM(colls); ++i) {
     EJCOLL *coll = (EJCOLL *)TCLISTVALPTR(colls, i);
-    push_coll(coll);
+    cn = make_shared_binary_string(coll->cname, coll->cnamesz);
+    push_string(cn);
+    f_utf8_to_string(1);
   }
   
   f_aggregate(TCLISTNUM(colls));
@@ -389,7 +392,7 @@ void push_coll(EJCOLL * coll)
   struct pike_string * name;
   if(!Collection_program)
     lookup_collection_program();
-  c = clone_object(LowCollection_program, 0);
+  c = clone_object(Collection_program, 0);
   name = make_shared_binary_string(coll->cname, coll->cnamesz);
   push_string(name);
   f_utf8_to_string(1);
