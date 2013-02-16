@@ -15,11 +15,14 @@
 
 extern struct program * EJDB_program;
 
+void push_coll(EJCOLL * coll);
 void throw_ejdb_error(struct object * db);
 EJDB * getdb(struct object * db);
 
 DECLARATIONS
 
+/*! @class Collection
+ */
 PIKECLASS Collection
 {
   DECLARATIONS
@@ -32,6 +35,8 @@ PIKECLASS Collection
 
   }
 
+  /*! @decl int delete_bson(string oid)
+   */
     PIKEFUN int delete_bson(string oid)
     {
       bson_oid_t _oid;
@@ -68,6 +73,8 @@ PIKECLASS Collection
       }
     }
 
+  /*! @decl string load_bson(string oid)
+   */
   PIKEFUN string load_bson(string oid)
   {
     bson_oid_t _oid;
@@ -107,6 +114,8 @@ PIKECLASS Collection
     }
   }
 
+  /*! @decl string save_bson(string bsonval, string|void oid, int|void merge)
+   */
   PIKEFUN string save_bson(string bsonval, string|void oid, int|void merge)
   {
     bson_oid_t _oid;
@@ -160,6 +169,8 @@ PIKECLASS Collection
 
   }
 
+  /*! @decl array find(string bson_query)
+   */
   PIKEFUN array find(string bson_query)
   {
     bson _bson;
@@ -187,7 +198,7 @@ PIKECLASS Collection
     //Now print the result set records
     for (i = 0; i < TCLISTNUM(res); ++i) {
     struct pike_string * bt;
-      bson *bsdata = (bson *)TCLISTVALPTR(res, i);
+      char *bsdata = (char *)TCLISTVALPTR(res, i);
       // TODO: find a more efficient approach to this (as in, do we really need the length in order to make the pike_string?)
       bson_init_finished_data(&_bson, bsdata);
 //      bson_print_raw(stderr, bsdata, 0);
@@ -212,8 +223,8 @@ PIKECLASS Collection
 
   EXIT
   {
-    if(THIS->coll)
-        free(THIS->coll);
+  //  if(THIS->coll)
+    //    free(THIS->coll);
     if(THIS->db)
       free_object(THIS->db);
 
@@ -233,11 +244,13 @@ PIKECLASS EJDB
 DECLARATIONS
 CVAR EJDB * jb;
 
+/*! @decl void create(string dbpath, int flags)
+ */
 PIKEFUN void create(string dbpath, int flags)
 {
   static EJDB *jb;
   jb = ejdbnew();
-  if (!ejdbopen(jb, dbpath->str, flags | (JBOWRITER | JBOCREAT | JBOTRUNC))) {
+  if (!ejdbopen(jb, dbpath->str, flags)) {
     Pike_error("Unable to open database %s", dbpath->str);
   }
   pop_n_elems(args);
@@ -246,6 +259,8 @@ PIKEFUN void create(string dbpath, int flags)
   //printf("db: %p\n", THIS->jb);
 }
 
+/*! @decl int sync()
+ */
 PIKEFUN int sync()
 {
    if (!ejdbsyncdb(THIS->jb)) {
@@ -254,7 +269,15 @@ PIKEFUN int sync()
    else RETURN 0;
 }
 
+/*! @decl int is_open()
+ */
+PIKEFUN int is_open()
+{
+   RETURN (ejdbisopen(THIS->jb));
+}
 
+/*! @decl int close()
+ */
 PIKEFUN int close()
 {
    if (!ejdbclose(THIS->jb)) {
@@ -263,72 +286,128 @@ PIKEFUN int close()
    else RETURN 0;
 }
 
+/*! @decl array(object) get_collections()
+ */
+PIKEFUN array get_collections()
+{
+  TCLIST *colls;
+  int i;
+
+  colls = ejdbgetcolls(THIS->jb);
+  
+  for (i = 0; i < TCLISTNUM(colls); ++i) {
+    EJCOLL *coll = (EJCOLL *)TCLISTVALPTR(colls, i);
+    push_coll(coll);
+  }
+  
+  f_aggregate(TCLISTNUM(colls));
+
+  //Dispose result set
+  tclistdel(colls);
+}
+
+/*! @decl object get_collection(string name)
+ */
 PIKEFUN object get_collection(string name)
 {
   EJCOLL* coll;
   
-  coll = ejdbgetcoll(THIS->jb, name->str);
+  ref_push_string(name);
+  f_string_to_utf8(1);
+    
+  coll = ejdbgetcoll(THIS->jb, (name->str));
+
+printf("coll: %p\n", coll);
   if(!coll)
   {
-    pop_n_elems(args);
+    pop_n_elems(args + 1);
     push_int(0);
     return;
   }
   else
   {
-    struct object * c;
-    c = clone_object(Collection_program, 0);
-    OBJ2_COLLECTION(c)->coll = coll;
-    OBJ2_COLLECTION(c)->db = this_object();
-    add_ref(OBJ2_COLLECTION(c)->db);
-    pop_n_elems(args);
-    push_object(c);
+    pop_n_elems(args + 1);
+    push_coll(coll);
     return;
   }
 }
 
+/*! @decl create_collection(string name, mapping|void opts) 
+  */
 PIKEFUN object create_collection(string name, mapping|void opts)
 {
   EJCOLL* coll;
   EJCOLLOPTS _opts;
-  
-  coll = ejdbcreatecoll(THIS->jb, name->str, &_opts);
+
+  ref_push_string(name);
+  f_string_to_utf8(1);
+  name = Pike_sp[0-1].u.string;
+  coll = ejdbcreatecoll(THIS->jb, (name->str), &_opts);
   if(!coll)
   {
-    pop_n_elems(args);
+    pop_n_elems(args + 1);
     push_int(0);
     return;
   }
   else
   {
-    struct object * c;
-    c = clone_object(Collection_program, 0);
-    OBJ2_COLLECTION(c)->coll = coll;
-    OBJ2_COLLECTION(c)->db = this_object();
-    add_ref(OBJ2_COLLECTION(c)->db);
-    pop_n_elems(args);
-    push_object(c);
+    pop_n_elems(args + 1);
+    push_coll(coll);
     return;
   }
 }
+
+void push_coll(EJCOLL * coll)
+{
+  struct object * c;
+  c = clone_object(Collection_program, 0);
+  OBJ2_COLLECTION(c)->coll = coll;
+  OBJ2_COLLECTION(c)->db = this_object();
+  add_ref(OBJ2_COLLECTION(c)->db);
+  push_object(c);
+}
+
 INIT
 {
 }
 
 EXIT
 {
-  if(THIS->jb)
-    ejdbclose(THIS->jb);
+  EJDB * jb;
+  jb = THIS->jb;
+  if(jb && ejdbisopen(jb))
+  { 
+    printf("closing\n");
+    ejdbclose(jb);
+  }
+  if(jb)
+  {
+    printf("freeing\n");
+    ejdbdel(jb);
+  }
 }
 
 EXTRA
 {
+  /*! @constant JBOREADER */
   add_integer_constant("JBOREADER", JBOREADER, 0);
+
+  /*! @constant JBOWRITER */
   add_integer_constant("JBOWRITER", JBOWRITER, 0);
+
+  /*! @constant JBOCREAT */
   add_integer_constant("JBOCREAT", JBOCREAT, 0);
+
+  /*! @constant JBOTRUNC */
   add_integer_constant("JBOTRUNC", JBOTRUNC, 0);
+
+  /*! @constant JBONOLCK */
   add_integer_constant("JBONOLCK", JBONOLCK, 0);
+
+  /*! @constant JBOLCKNB */
   add_integer_constant("JBOLCKNB", JBOLCKNB, 0);
+
+  /*! @constant JBOTSYNC */
   add_integer_constant("JBOTSYNC", JBOTSYNC, 0);
 }
 
