@@ -32,6 +32,42 @@ PIKECLASS Collection
 
   }
 
+    PIKEFUN int delete_bson(string oid)
+    {
+      bson_oid_t _oid;
+      int ret;
+      
+      if(!THIS->coll)
+      {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+      }
+
+      if(oid && !oid->len)
+      {
+        pop_n_elems(args);
+        Pike_error("OID cannot be a zero-length string.\n");
+      }
+
+      bson_oid_from_string(&_oid, oid->str);
+
+      if((ret = ejdbrmbson(THIS->coll, &_oid)))
+      {
+        pop_stack();
+        push_int(0);
+      }
+      else
+      {
+          int ecode = ejdbecode(getdb(THIS->db)); 
+  //        printf("ecode: %d\n", ecode);
+          if (ecode != TCESUCCESS) {
+          pop_stack();
+    //          printf("throwing error.\n");
+              throw_ejdb_error(THIS->db);
+              }
+      }
+    }
+
   PIKEFUN string load_bson(string oid)
   {
     bson_oid_t _oid;
@@ -54,7 +90,7 @@ PIKECLASS Collection
     if((_bson = ejdbloadbson(THIS->coll, &_oid)))
     {
       struct pike_string * bsonStr;
-      bson_print_raw(stdout, bson_data(_bson), 10);
+//      bson_print_raw(stdout, bson_data(_bson), 10);
       bsonStr = make_shared_binary_string(bson_data(_bson), bson_size(_bson));
      // bson_destroy(&_bson);
       RETURN bsonStr;
@@ -62,9 +98,8 @@ PIKECLASS Collection
     else
     {
         int ecode = ejdbecode(getdb(THIS->db)); 
-        printf("ecode: %d\n", ecode);
         if (ecode != TCESUCCESS) {
-            printf("throwing error.\n");
+  pop_stack();
             throw_ejdb_error(THIS->db);
             }
       pop_stack();
@@ -100,7 +135,7 @@ PIKECLASS Collection
     }
 
     bson_init_finished_data(&_bson, bsonval->str);
-    bson_print_raw(stdout, bson_data(&_bson), 10);
+ //   bson_print_raw(stdout, bson_data(&_bson), 10);
     
     if(ejdbsavebson2(THIS->coll, &_bson, &_oid, merge))
     {
@@ -114,11 +149,63 @@ PIKECLASS Collection
     }
     else
     {
+          int ecode = ejdbecode(getdb(THIS->db)); 
+          if (ecode != TCESUCCESS) {
+            pop_stack();
+              throw_ejdb_error(THIS->db);
+              }
+    
       RETURN 0;
     }
 
   }
 
+  PIKEFUN array find(string bson_query)
+  {
+    bson _bson;
+    EJQ *q1;
+    uint32_t count;
+    TCLIST *res;
+    int i;
+    
+    if(!THIS->coll)
+    {
+      pop_n_elems(args);
+      Pike_error("Collection not initialized properly.\n");
+    }
+    
+    bson_init_finished_data(&_bson, bson_query->str);
+ //  bson_print_raw(stdout, bson_data(&_bson), 10);
+    
+    q1 = ejdbcreatequery(getdb(THIS->db), &_bson, NULL, 0, NULL);
+
+    res = ejdbqryexecute(THIS->coll, q1, &count, 0, NULL);
+ //   fprintf(stderr, "\n\nRecords found: %d\n", count);
+
+    pop_stack();
+
+    //Now print the result set records
+    for (i = 0; i < TCLISTNUM(res); ++i) {
+    struct pike_string * bt;
+      bson *bsdata = (bson *)TCLISTVALPTR(res, i);
+      // TODO: find a more efficient approach to this (as in, do we really need the length in order to make the pike_string?)
+      bson_init_finished_data(&_bson, bsdata);
+//      bson_print_raw(stderr, bsdata, 0);
+      
+      bt = make_shared_binary_string(bson_data(&_bson), bson_size(&_bson));
+      push_string(bt);
+      }
+    fprintf(stderr, "\n");
+    f_aggregate(count);
+
+    //Dispose result set
+    tclistdel(res);
+
+    //Dispose query
+    ejdbquerydel(q1);
+ //   bson_destroy(&_bson);
+  }
+  
   INIT
   {
   }
@@ -156,7 +243,7 @@ PIKEFUN void create(string dbpath, int flags)
   pop_n_elems(args);
   
   THIS->jb = jb;
-  printf("db: %p\n", THIS->jb);
+  //printf("db: %p\n", THIS->jb);
 }
 
 PIKEFUN int sync()
@@ -280,7 +367,7 @@ EXTRA
    
    _db = getdb(db);
    ecode = ejdbecode(_db);
-printf("throwing error!\n");
+//printf("throwing error!\n");
    Pike_error(ejdberrmsg(ecode));
  }
 
