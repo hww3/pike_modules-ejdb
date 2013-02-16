@@ -194,13 +194,16 @@ flags ID_PROTECTED;
 
   /*! @decl array low_find(string bson_query)
    */
-  PIKEFUN array low_find(string bson_query)
+  PIKEFUN array low_find(string bson_query, string|void bson_hints)
   {
+  
     bson _bson;
+    bson _hints;
     EJQ *q1;
     uint32_t count;
     TCLIST *res;
     int i;
+    int havehints = 0;
     
     if(!THISLC->coll)
     {
@@ -209,12 +212,20 @@ flags ID_PROTECTED;
     }
     
     bson_init_finished_data(&_bson, bson_query->str);
+    if(bson_hints)
+    {
+      havehints = 1;
+      bson_init_finished_data(&_hints, bson_hints->str);
+    }    
  //  bson_print_raw(stdout, bson_data(&_bson), 10);
     
-    q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, NULL);
-
+   if(havehints)
+      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, &_hints);
+   else
+     q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, NULL);
+   
 printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
-    res = ejdbqryexecute(THISLC->coll, q1, &count, 0, NULL);
+      res = ejdbqryexecute(THISLC->coll, q1, &count, 0, NULL);
  //   fprintf(stderr, "\n\nRecords found: %d\n", count);
 
     pop_stack();

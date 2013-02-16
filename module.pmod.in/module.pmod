@@ -8,10 +8,10 @@ class Collection
 {
   inherit LowCollection;
 
-  array find(mapping query)
+  array find(mapping query, mapping|void hints)
   {
     mixed res;
-    res = low_find(BSON.toDocument(query, 1));
+    res = low_find(BSON.toDocument(query, 1), hints?BSON.toDocument(hints, 1):0);
     foreach(res; int i; mixed e)
     {
       res[i] = BSON.fromDocument(e);
