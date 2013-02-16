@@ -22,16 +22,19 @@ struct EJCOLL { /**> EJDB Collection. */
 #endif /* HAVE_TCEJDB/EJDB_H */
 
 extern struct program * EJDB_program;
+struct program * Collection_program;
 
+void lookup_collection_program();
 void push_coll(EJCOLL * coll);
 void throw_ejdb_error(struct object * db);
 EJDB * getdb(struct object * db);
 
 DECLARATIONS
 
-/*! @class Collection
+/*! @class LowCollection
  */
-PIKECLASS Collection
+PIKECLASS LowCollection
+flags ID_PROTECTED;
 {
   DECLARATIONS
   CVAR EJCOLL * coll;
@@ -39,6 +42,8 @@ PIKECLASS Collection
   PIKEVAR string name;
 
 #define COLL_DB(X) (EJDB *)(OBJ2_DB(X))
+#define OBJ2_COLLECTION(X) ((struct LowCollection_struct *)get_storage(X, LowCollection_program))
+#define THISLC ((struct LowCollection_struct *)get_storage(Pike_fp->current_object, LowCollection_program))
   PIKEFUN void create()
   {
 
@@ -47,7 +52,7 @@ PIKECLASS Collection
   PIKEFUN string _sprintf(mixed format, mixed bar)
   {
     push_text("EJDB.Collection(");
-    push_string(THIS->name);
+    push_string(THISLC->name);
     f_add(2);
     push_text(")");
     f_add(2);
@@ -60,7 +65,7 @@ PIKECLASS Collection
       bson_oid_t _oid;
       int ret;
       
-      if(!THIS->coll)
+      if(!THISLC->coll)
       {
         pop_n_elems(args);
         Pike_error("Collection not initialized properly.\n");
@@ -74,19 +79,19 @@ PIKECLASS Collection
 
       bson_oid_from_string(&_oid, oid->str);
 
-      if((ret = ejdbrmbson(THIS->coll, &_oid)))
+      if((ret = ejdbrmbson(THISLC->coll, &_oid)))
       {
         pop_stack();
         push_int(0);
       }
       else
       {
-          int ecode = ejdbecode(getdb(THIS->db)); 
+          int ecode = ejdbecode(getdb(THISLC->db)); 
   //        printf("ecode: %d\n", ecode);
           if (ecode != TCESUCCESS) {
           pop_stack();
     //          printf("throwing error.\n");
-              throw_ejdb_error(THIS->db);
+              throw_ejdb_error(THISLC->db);
               }
       }
     }
@@ -98,7 +103,7 @@ PIKECLASS Collection
     bson_oid_t _oid;
     bson * _bson;
 
-    if(!THIS->coll)
+    if(!THISLC->coll)
     {
       pop_n_elems(args);
       Pike_error("Collection not initialized properly.\n");
@@ -112,7 +117,7 @@ PIKECLASS Collection
 
     bson_oid_from_string(&_oid, oid->str);
 
-    if((_bson = ejdbloadbson(THIS->coll, &_oid)))
+    if((_bson = ejdbloadbson(THISLC->coll, &_oid)))
     {
       struct pike_string * bsonStr;
 //      bson_print_raw(stdout, bson_data(_bson), 10);
@@ -122,10 +127,10 @@ PIKECLASS Collection
     }
     else
     {
-        int ecode = ejdbecode(getdb(THIS->db)); 
+        int ecode = ejdbecode(getdb(THISLC->db)); 
         if (ecode != TCESUCCESS) {
   pop_stack();
-            throw_ejdb_error(THIS->db);
+            throw_ejdb_error(THISLC->db);
             }
       pop_stack();
       push_int(0);
@@ -140,7 +145,7 @@ PIKECLASS Collection
     bson _bson;
     int _merge = 0;
 
-    if(!THIS->coll)
+    if(!THISLC->coll)
     {
       pop_n_elems(args);
       Pike_error("Collection not initialized properly.\n");
@@ -164,7 +169,7 @@ PIKECLASS Collection
     bson_init_finished_data(&_bson, bsonval->str);
  //   bson_print_raw(stdout, bson_data(&_bson), 10);
     
-    if(ejdbsavebson2(THIS->coll, &_bson, &_oid, merge))
+    if(ejdbsavebson2(THISLC->coll, &_bson, &_oid, merge))
     {
       struct pike_string * oidStr;
       char c[24];
@@ -176,10 +181,10 @@ PIKECLASS Collection
     }
     else
     {
-          int ecode = ejdbecode(getdb(THIS->db)); 
+          int ecode = ejdbecode(getdb(THISLC->db)); 
           if (ecode != TCESUCCESS) {
             pop_stack();
-              throw_ejdb_error(THIS->db);
+              throw_ejdb_error(THISLC->db);
               }
     
       RETURN 0;
@@ -187,9 +192,9 @@ PIKECLASS Collection
 
   }
 
-  /*! @decl array find(string bson_query)
+  /*! @decl array low_find(string bson_query)
    */
-  PIKEFUN array find(string bson_query)
+  PIKEFUN array low_find(string bson_query)
   {
     bson _bson;
     EJQ *q1;
@@ -197,7 +202,7 @@ PIKECLASS Collection
     TCLIST *res;
     int i;
     
-    if(!THIS->coll)
+    if(!THISLC->coll)
     {
       pop_n_elems(args);
       Pike_error("Collection not initialized properly.\n");
@@ -206,9 +211,10 @@ PIKECLASS Collection
     bson_init_finished_data(&_bson, bson_query->str);
  //  bson_print_raw(stdout, bson_data(&_bson), 10);
     
-    q1 = ejdbcreatequery(getdb(THIS->db), &_bson, NULL, 0, NULL);
+    q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, NULL);
 
-    res = ejdbqryexecute(THIS->coll, q1, &count, 0, NULL);
+printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
+    res = ejdbqryexecute(THISLC->coll, q1, &count, 0, NULL);
  //   fprintf(stderr, "\n\nRecords found: %d\n", count);
 
     pop_stack();
@@ -254,9 +260,9 @@ PIKECLASS Collection
  */
 
 
-/*! @class EJDB
+/*! @class Database
  */
-PIKECLASS EJDB
+PIKECLASS Database
 {
 
 DECLARATIONS
@@ -375,11 +381,15 @@ PIKEFUN object create_collection(string name, mapping|void opts)
   }
 }
 
+#define OBJ2_COLLECTION(X) ((struct LowCollection_struct *)get_storage(X, LowCollection_program))
+
 void push_coll(EJCOLL * coll)
 {
   struct object * c;
   struct pike_string * name;
-  c = clone_object(Collection_program, 0);
+  if(!Collection_program)
+    lookup_collection_program();
+  c = clone_object(LowCollection_program, 0);
   name = make_shared_binary_string(coll->cname, coll->cnamesz);
   push_string(name);
   f_utf8_to_string(1);
@@ -391,6 +401,20 @@ void push_coll(EJCOLL * coll)
   OBJ2_COLLECTION(c)->name = name;
   add_ref(OBJ2_COLLECTION(c)->db);
   push_object(c);
+}
+
+void lookup_collection_program()
+{
+  push_text("Database.EJDB.Collection");
+  SAFE_APPLY_MASTER("resolv", 1 );
+  if(Pike_sp[-1].type != T_PROGRAM)
+  {
+    Pike_error("Unable to load class Database.EJDB.Collection.\n");
+  }
+  
+  Collection_program = Pike_sp[-1].u.program;
+  add_ref(Collection_program);
+  pop_stack();
 }
 
 INIT
@@ -411,6 +435,9 @@ EXIT
     printf("freeing\n");
     ejdbdel(jb);
   }
+  
+  if(Collection_program)
+    free_program(Collection_program);
 }
 
 EXTRA
@@ -460,8 +487,8 @@ EXTRA
 
  EJDB * getdb(struct object * db)
  {
-    struct EJDB_struct * _db;
-    _db = (OBJ2_EJDB(db));
+    struct Database_struct * _db;
+    _db = (OBJ2_DATABASE(db));
     return _db->jb; 
  }
 

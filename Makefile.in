@@ -10,7 +10,7 @@ OBJS=ejdb.o
 
 # the module directory we put things into. it should be a directory path
 # of .pmod directories, and this must end with a trailing slash.
-MODDIR=Public.pmod/
+MODDIR=Database.pmod/
 
 # the module name the resulting dynamic and/or pike module will be 
 # installed as. note that it's just a module or class name without extension.
@@ -22,14 +22,14 @@ AUTODOC_SRC_IN=
 
 # the module name note that there is no error checking, so all of these
 # related variables should agree.
-MODULE_NAME=Public.EJDB
+MODULE_NAME=Database.EJDB
 
 # the module name, with periods replaced with underscores. used to 
 # generate the module distribution.
-MODULE_DIR_NAME=Public_EJDB
+MODULE_DIR_NAME=Database_EJDB
 
 # need i say more?
-MODULE_LICENSE=GPL
+MODULE_LICENSE=LGPL
 
 # we shouldn't need to do anything to the rest of the file.
 
