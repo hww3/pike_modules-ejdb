@@ -8,6 +8,24 @@ class Collection
 {
   inherit LowCollection;
 
+  int save(mapping obj, string|void oid, int|void merge)
+  {
+    if(oid)
+      return save_bson(BSON.toDocument(obj), oid, merge);
+    else
+      return save_bson(BSON.toDocument(obj), UNDEFINED, merge);
+  }
+  
+  int load(string oid)
+  {
+    string ret = load_bson(oid);
+
+    if(ret)
+      return BSON.fromDocument(ret);
+    else 
+      return 0;
+  }
+  
   array find(mapping query, mapping|void hints)
   {
     mixed res;

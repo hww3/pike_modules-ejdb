@@ -58,7 +58,7 @@ flags ID_PROTECTED;
     f_add(2);
   }
 
-  /*! @decl int delete_bson(string oid)
+  /*! @decl int delete(string oid)
    */
     PIKEFUN int delete_bson(string oid)
     {
