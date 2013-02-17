@@ -1,4 +1,4 @@
-/*! @module Public
+/*! @module Database
  */
 
 /*! @module EJDB
@@ -270,7 +270,6 @@ printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
 /*! @endclass
  */
 
-
 /*! @class Database
  */
 PIKECLASS Database
@@ -321,6 +320,22 @@ PIKEFUN int close()
    else RETURN 0;
 }
 
+/*! @decl int delete_collections(string collection, int unlink)
+ *! Removes collections specified by 'name'.
+ */
+PIKEFUN array delete_collection(string name, int unlink)
+{
+  int ret;
+ 
+  ref_push_string(name);
+  f_string_to_utf8(1);
+
+  ret = ejdbrmcoll(THIS->jb, Pike_sp[-1].u.string->str, unlink);
+  pop_n_elems(args + 1);
+  
+  push_int(ret);
+} 
+
 /*! @decl array(string) get_collections()
  */
 PIKEFUN array get_collections()
@@ -352,8 +367,8 @@ PIKEFUN object get_collection(string name)
   
   ref_push_string(name);
   f_string_to_utf8(1);
-    
-  coll = ejdbgetcoll(THIS->jb, (name->str));
+
+  coll = ejdbgetcoll(THIS->jb, (Pike_sp[-1].u.string->str));
 
 printf("coll: %p\n", coll);
   if(!coll)
@@ -370,7 +385,12 @@ printf("coll: %p\n", coll);
   }
 }
 
-/*! @decl create_collection(string name, mapping|void opts) 
+/*! @decl object create_collection(string name, mapping|void opts) 
+  *! OPTIONS:
+  *!large
+  *!compressed
+  *!records
+  *!cachcedrecords
   */
 PIKEFUN object create_collection(string name, mapping|void opts)
 {
@@ -487,41 +507,101 @@ EXIT
     free_program(Collection_program);
 }
 
-EXTRA
-{
-  /*! @constant JBOREADER */
-  add_integer_constant("JBOREADER", JBOREADER, 0);
-
-  /*! @constant JBOWRITER */
-  add_integer_constant("JBOWRITER", JBOWRITER, 0);
-
-  /*! @constant JBOCREAT */
-  add_integer_constant("JBOCREAT", JBOCREAT, 0);
-
-  /*! @constant JBOTRUNC */
-  add_integer_constant("JBOTRUNC", JBOTRUNC, 0);
-
-  /*! @constant JBONOLCK */
-  add_integer_constant("JBONOLCK", JBONOLCK, 0);
-
-  /*! @constant JBOLCKNB */
-  add_integer_constant("JBOLCKNB", JBOLCKNB, 0);
-
-  /*! @constant JBOTSYNC */
-  add_integer_constant("JBOTSYNC", JBOTSYNC, 0);
-}
-
 }
 
 /*! @endclass
  */
 
-/*! @endmodule
- */
+ EXTRA
+ {
+   /* DB OBJECT CREATION CONSTANTS */
 
-/*! @endmodule
- */
+   /*! @decl constant JBOREADER
+     *! Create: Open as a reader.
+     */
+   add_integer_constant("JBOREADER", JBOREADER, 0);
 
+   /*! @decl constant JBOWRITER 
+    *! Create: Open as a writer. 
+   */
+   add_integer_constant("JBOWRITER", JBOWRITER, 0);
+
+   /*! @decl constant JBOCREAT 
+    *! Create: Create if db file not exists.
+    */
+   add_integer_constant("JBOCREAT", JBOCREAT, 0);
+
+   /*! @decl constant JBOTRUNC 
+    *! Create: Truncate db on open.
+    */
+   add_integer_constant("JBOTRUNC", JBOTRUNC, 0);
+
+   /*! @decl constant JBONOLCK 
+    *! Create: Open without locking.
+    */
+   add_integer_constant("JBONOLCK", JBONOLCK, 0);
+
+   /*! @decl constant JBOLCKNB
+    *! Create: Lock without blocking.
+    */
+   add_integer_constant("JBOLCKNB", JBOLCKNB, 0);
+
+   /*! @decl constant JBOTSYNC 
+    *! Create: Synchronize every transaction. 
+    */
+   add_integer_constant("JBOTSYNC", JBOTSYNC, 0);
+
+
+   /* INDEX CONSTANTS */
+
+   /*! @decl constant JBIDXDROP 
+    *! Index: Drop index. 
+    */
+   add_integer_constant("JBIDXDROP", JBIDXDROP, 0);
+
+   /*! @decl constant JBIDXDROPALL 
+    *! Index: Drop index for all types. 
+    */
+   add_integer_constant("JBIDXDROPALL", JBIDXDROPALL, 0);
+
+   /*! @decl constant JBIDXOP 
+    *! Index: Optimize index. 
+    */
+   add_integer_constant("JBIDXOP", JBIDXOP, 0);
+
+   /*! @decl constant JBIDXREBLD 
+    *! Index: Rebuild index. 
+    */
+   add_integer_constant("JBIDXREBLD", JBIDXREBLD, 0);
+
+   /*! @decl constant JBIDXNUM 
+    *! Index: Number index. 
+    */
+   add_integer_constant("JBIDXNUM", JBIDXNUM, 0);
+
+   /*! @decl constant JBIDXSTR 
+    *! Index: String index. 
+    */
+   add_integer_constant("JBIDXSTR", JBIDXSTR, 0);
+
+   /*! @decl constant JBIDXARR 
+    *! Index: Array token index. 
+    */
+   add_integer_constant("JBIDXARR", JBIDXARR, 0);
+
+   /*! @decl constant JBIDXISTR 
+    *! Index: Case insensitive string index. 
+    */
+   add_integer_constant("JBIDXISTR", JBIDXISTR, 0);
+
+
+   /* QUERY CONSTANTS */
+
+   /*! @decl constant JBQURYCOUNT
+    *! Query only count(*) in find()
+    */
+   add_integer_constant("JBQRYCOUNT", JBQRYCOUNT, 0);
+ }
  PIKE_MODULE_INIT
  {
    INIT;
@@ -550,3 +630,8 @@ EXTRA
    Pike_error(ejdberrmsg(ecode));
  }
 
+ /*! @endmodule
+  */
+
+ /*! @endmodule
+  */
