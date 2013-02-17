@@ -246,6 +246,7 @@ flags ID_PROTECTED;
     }    
  //  bson_print_raw(stdout, bson_data(&_bson), 10);
     
+    THREADS_ALLOW();
    if(havehints)
       q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, &_hints);
    else
@@ -254,6 +255,7 @@ flags ID_PROTECTED;
 printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
       res = ejdbqryexecute(THISLC->coll, q1, &count, _flags, NULL);
  //   fprintf(stderr, "\n\nRecords found: %d\n", count);
+   THREADS_DISALLOW();
 
     pop_stack();
 
@@ -360,8 +362,8 @@ printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
    */
   PIKEFUN int sync()
   {
-     if (!ejdbsynccoll(THISLC->coll)) {
-         RETURN ejdbecode(THIS->jb);
+     if (!ejdbsyncoll(THISLC->coll)) {
+         RETURN ejdbecode(getdb(THISLC->db));
      }
      else RETURN 0;
   }
@@ -406,7 +408,7 @@ PIKEFUN void create(string dbpath, int flags)
 
 /*! @decl int sync()
  *! Synchronize entire EJDB database and all its collections with storage.
- */
+ */ 
 PIKEFUN int sync()
 {
    if (!ejdbsyncdb(THIS->jb)) {
