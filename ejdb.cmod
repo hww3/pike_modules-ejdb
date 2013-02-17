@@ -376,10 +376,43 @@ PIKEFUN object create_collection(string name, mapping|void opts)
 {
   EJCOLL* coll;
   EJCOLLOPTS _opts;
+  struct svalue * sv;
 
   ref_push_string(name);
   f_string_to_utf8(1);
   name = Pike_sp[0-1].u.string;
+
+  if(opts)
+  {
+    sv = simple_mapping_string_lookup(opts, "large");
+    
+    if(sv && sv->type == T_INT)
+    {
+      _opts.large = (sv->u.integer?1:0);
+    }
+    
+    sv = simple_mapping_string_lookup(opts, "compressed");
+
+    if(sv && sv->type == T_INT)
+    {
+      _opts.compressed = (sv->u.integer?1:0);
+    }
+
+    sv = simple_mapping_string_lookup(opts, "records");
+
+    if(sv && sv->type == T_INT)
+    {
+      _opts.records = (sv->u.integer);
+    }
+
+    sv = simple_mapping_string_lookup(opts, "cachedrecords");
+
+    if(sv && sv->type == T_INT)
+    {
+      _opts.cachedrecords = (sv->u.integer?1:0);
+    }
+  }
+
   coll = ejdbcreatecoll(THIS->jb, (name->str), &_opts);
   if(!coll)
   {
