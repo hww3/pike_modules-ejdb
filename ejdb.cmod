@@ -96,6 +96,28 @@ flags ID_PROTECTED;
       }
     }
 
+    /*! @decl int set_index(string index, int flags)
+     *! Set index for JSON field in EJDB collection.
+     */
+  PIKEFUN int set_index(string index, int flags)
+  {
+    int ret;
+
+    if(!THISLC->coll)
+    {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+    }
+  
+     ref_push_string(index);
+     f_string_to_utf8(1);
+
+     ret = ejdbsetindex(THISLC->coll, (const char *)(Pike_sp[-1].u.string->str), flags);
+  
+     pop_n_elems(args + 1);
+     push_int(ret);
+  }
+
   /*! @decl string load_bson(string oid)
    */
   PIKEFUN string load_bson(string oid)
@@ -194,9 +216,9 @@ flags ID_PROTECTED;
 
   /*! @decl array low_find(string bson_query)
    */
-  PIKEFUN array low_find(string bson_query, string|void bson_hints)
+  PIKEFUN array low_find(string bson_query, string|void bson_hints, int|void flags)
   {
-  
+    int _flags = 0;
     bson _bson;
     bson _hints;
     EJQ *q1;
@@ -210,6 +232,11 @@ flags ID_PROTECTED;
       pop_n_elems(args);
       Pike_error("Collection not initialized properly.\n");
     }
+    
+    if(flags->type == T_INT)
+     {
+       _flags = flags->u.integer;
+     }
     
     bson_init_finished_data(&_bson, bson_query->str);
     if(bson_hints)
@@ -225,7 +252,7 @@ flags ID_PROTECTED;
      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, NULL);
    
 printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
-      res = ejdbqryexecute(THISLC->coll, q1, &count, 0, NULL);
+      res = ejdbqryexecute(THISLC->coll, q1, &count, _flags, NULL);
  //   fprintf(stderr, "\n\nRecords found: %d\n", count);
 
     pop_stack();
@@ -252,19 +279,103 @@ printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
  //   bson_destroy(&_bson);
   }
   
+  /*! @decl int begin_transaction()
+   *! Begin transaction for EJDB collection.
+   */
+  PIKEFUN int begin_transaction()
+  {
+    int ret;
+    
+    if(!THISLC->coll)
+    {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+    }
+    
+    ret = ejdbtranbegin(THISLC->coll);
+    
+    push_int(ret);
+  }
+
+  /*! @decl int abort_transaction()
+   *! Abort transaction for EJDB collection.
+   */
+  PIKEFUN int abort_transaction()
+  {
+    int ret;
+    
+    if(!THISLC->coll)
+    {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+    }
+    
+    ret = ejdbtranabort(THISLC->coll);
+    
+    push_int(ret);
+  }
+
+  /*! @decl int commit_transaction()
+   *! Commit transaction for EJDB collection.
+   */
+  PIKEFUN int commit_transaction()
+  {
+    int ret;
+    
+    if(!THISLC->coll)
+    {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+    }
+    
+    ret = ejdbtrancommit(THISLC->coll);
+    
+    push_int(ret);
+  }
+
+  /*! @decl int transaction_status()
+   *! Get current transaction status.
+   */
+  PIKEFUN int transaction_status()
+  {
+    bool ret;
+    bool txstat;
+    
+    if(!THISLC->coll)
+    {
+        pop_n_elems(args);
+        Pike_error("Collection not initialized properly.\n");
+    }
+    
+    ret = ejdbtranstatus(THISLC->coll, &txstat);
+    
+    if(ret)
+        push_int(txstat);
+    else
+        Pike_error("Error getting transaction status.\n");
+  }
+  
+  /*! @decl int sync()
+   *! Synchronize content of a EJDB collection database with the file on device.
+   */
+  PIKEFUN int sync()
+  {
+     if (!ejdbsynccoll(THISLC->coll)) {
+         RETURN ejdbecode(THIS->jb);
+     }
+     else RETURN 0;
+  }
+  
+
   INIT
   {
   }
 
   EXIT
   {
-  //  if(THIS->coll)
-    //    free(THIS->coll);
     if(THIS->db)
       free_object(THIS->db);
-
   }
-
 }
 
 /*! @endclass
@@ -294,6 +405,7 @@ PIKEFUN void create(string dbpath, int flags)
 }
 
 /*! @decl int sync()
+ *! Synchronize entire EJDB database and all its collections with storage.
  */
 PIKEFUN int sync()
 {
