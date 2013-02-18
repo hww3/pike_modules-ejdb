@@ -78,6 +78,7 @@ release: verify
 	cd ${MODULE_DIR_NAME}-1.${MIN} && \
 	pike -x module --autoheader && pike -x module --autoconf && \
 	rm -rf autom4*
+	cp *.c ${MODULE_DIR_NAME}-1.${MIN}
 	tar cvf ${MODULE_DIR_NAME}-1.${MIN}.tar ${MODULE_DIR_NAME}-1.${MIN}
 	gzip ${MODULE_DIR_NAME}-1.${MIN}.tar
 	rm -rf ${MODULE_DIR_NAME}-1.${MIN}
