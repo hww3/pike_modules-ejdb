@@ -1,0 +1,3 @@
+This is a module that provides access to EJDB, an embedded
+document-centric database. For information about EJDB, visit
+http://www.ejdb.org/.
