@@ -7,6 +7,7 @@ test_true(programp(Database.EJDB.Collection))
 
 test_define_program(db, [[
   object db;
+  string oid;
   void create()
   {
     db = Database.EJDB.Database("test.ejdb", Database.EJDB.JBOWRITER|Database.EJDB.JBOTRUNC|Database.EJDB.JBOCREAT);
@@ -20,5 +21,16 @@ test_true(objectp(dbo))
 test_true(functionp(dbo->db->create_collection))
 test_true(objectp(dbo->db->create_collection("bar")))))
 test_eq(sizeof(dbo->db->get_collections()), 1)
-test_true(stringp(dbo->db->get_collection("bar")
-  ->save((["foo": 1, "bar": "2"]))))
+test_do([[
+  string oid = dbo->db->get_collection("bar")
+  ->save((["foo": 1, "bar": "2"])); 
+  dbo->oid = oid;
+  return oid;
+  ]])
+test_true(stringp(dbo->oid))
+test_true(mappingp(dbo->db->get_collection("bar")->load(dbo->oid)))
+test_true([[
+  mapping x = dbo->db->get_collection("bar")->load(dbo->oid);
+  m_delete(x, "_id");
+  return equal(x, (["foo": 1, "bar": "2"]));
+ ]])
