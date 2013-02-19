@@ -1,0 +1,17 @@
+test_true(objectp(Database.EJDB))
+test_true(programp(Database.EJDB.Database))
+test_true(programp(Database.EJDB.Collection))
+
+test_true(objectp(Database.EJDB.Database("test.ejdb", Database.EJDB.JBOWRITER|Database.EJDB.JBOTRUNC|Database.EJDB.JBOCREAT)))
+test_define_program(db, [[
+  object db;
+  void create()
+  {
+    db = Database.EJDB.Database("test.ejdb", Database.EJDB.JBOWRITER);
+  }
+  ]])
+
+test_true(objectp(db()->db))
+test_false(db()->db->get_collection("foo"))
+test_true(equal(db()->db->get_collections(), ({})))
+test_true(db()->db->create_collection("foo", ([])))

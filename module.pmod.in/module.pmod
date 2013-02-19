@@ -10,7 +10,7 @@ class Collection
   inherit LowCollection;
 
   //!
-  int save(mapping obj, string|void oid, int|void merge)
+  string save(mapping obj, string|void oid, int|void merge)
   {
     if(oid)
       return save_bson(Standards.BSON.to_document(obj), oid, merge);

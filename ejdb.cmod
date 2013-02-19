@@ -398,7 +398,13 @@ PIKEFUN void create(string dbpath, int flags)
   static EJDB *jb;
   jb = ejdbnew();
   if (!ejdbopen(jb, dbpath->str, flags)) {
-    Pike_error("Unable to open database %s", dbpath->str);
+     int ecode;
+     char msg2[256];
+     const char * msg;
+     ecode = ejdbecode(jb);
+     msg = ejdberrmsg(ecode);
+     snprintf(msg2, sizeof(msg2), "Error creating database object: %s\n", msg);
+     Pike_error(msg2); 
   }
   pop_n_elems(args);
   
@@ -484,7 +490,7 @@ PIKEFUN object get_collection(string name)
 
   coll = ejdbgetcoll(THIS->jb, (Pike_sp[-1].u.string->str));
 
-printf("coll: %p\n", coll);
+//printf("coll: %p\n", coll);
   if(!coll)
   {
     pop_n_elems(args + 1);
@@ -608,12 +614,12 @@ EXIT
   jb = THIS->jb;
   if(jb && ejdbisopen(jb))
   { 
-    printf("closing\n");
+//    printf("closing\n");
     ejdbclose(jb);
   }
   if(jb)
   {
-    printf("freeing\n");
+//    printf("freeing\n");
     ejdbdel(jb);
   }
   
