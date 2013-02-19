@@ -743,11 +743,14 @@ EXIT
  {
    EJDB * _db;
    int ecode;
+   char msg2[256];
+   const char * msg;
    
    _db = getdb(db);
    ecode = ejdbecode(_db);
-//printf("throwing error!\n");
-   Pike_error(ejdberrmsg(ecode));
+   msg = ejdberrmsg(ecode);
+   snprintf(msg2, sizeof(msg2), "Error creating database object: %s\n", msg);
+   Pike_error(msg2);
  }
 
  /*! @endmodule
