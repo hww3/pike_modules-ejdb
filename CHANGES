@@ -1,3 +1,10 @@
+Changes since version 1.1
+
+- Better error handling.
+- Support for saving multiple records in one call.
+- Support for "OR queries" in low_find() and find().
+- Better documentation, tests and some examples.
+
 Changes since version 1.0
 
 - Fix modref generation
