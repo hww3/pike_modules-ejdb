@@ -1,3 +1,25 @@
 This is a module that provides access to EJDB, an embedded
 document-centric database. For information about EJDB, visit
 http://www.ejdb.org/.
+
+NOTE: the EJDB library enforces a single instance per database per thread, so if you try to
+create a database object using the same path in the same thread, you'll get an exception.
+Making sure that the database and associated collection objects are destroyed helps to 
+avoid this problem.
+
+ object q = Database.EJDB.Database("foo2z", Database.EJDB.JBOWRITER|Database.EJDB.JBOCREAT);
+ object c  = q->create_collection("bar");                                                   
+ c->save((["name": "Tom", "age": 21]));     
+  (4) Result: "5124476aeec9bd2400000003"
+ c->save((["name": "Richard", "age": 32]));
+  (5) Result: "51244771eec9bd2400000004"
+ c->save((["name": "Harry", "age": 14]));  
+  (6) Result: "51244779eec9bd2400000005"
+ c->find((["name": "Tom"]));
+  (7) Result: ({ /* 1 element */
+                ([ /* 3 elements */
+                  "_id": ObjectId(5124476aeec9bd2400000003),
+                  "age": 21,
+                  "name": "Tom"
+                ])
+            })
