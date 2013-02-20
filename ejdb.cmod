@@ -216,7 +216,7 @@ flags ID_PROTECTED;
 
   /*! @decl array low_find(string bson_query)
    */
-  PIKEFUN array low_find(string bson_query, string|void bson_hints, int|void flags)
+  PIKEFUN array low_find(string bson_query, array|void or_queries, string|void bson_hints, int|void flags)
   {
     int _flags = 0;
     bson _bson;
@@ -226,6 +226,10 @@ flags ID_PROTECTED;
     TCLIST *res;
     int i;
     int havehints = 0;
+    int numorq = 0;
+    int q;
+    
+    bson* orq = NULL;
     
     if(!THISLC->coll)
     {
@@ -233,35 +237,52 @@ flags ID_PROTECTED;
       Pike_error("Collection not initialized properly.\n");
     }
     
-    if(flags->type == T_INT)
+    if(flags && flags->type == T_INT)
      {
        _flags = flags->u.integer;
      }
     
     bson_init_finished_data(&_bson, bson_query->str);
+    
+    if(or_queries)
+    {
+      struct svalue * sv;
+      numorq = or_queries->size;
+      orq = malloc(sizeof(bson) * numorq);
+      for(q = 0; q < numorq; q++)
+      {
+        sv = ITEM(or_queries)+q;
+        bson_init_finished_data(&(orq[q]), sv->u.string->str);
+ //       bson_print_raw(stderr, bson_data(orq+q), 0);
+        
+      }
+    }
+    
     if(bson_hints)
     {
       havehints = 1;
       bson_init_finished_data(&_hints, bson_hints->str);
+      
     }    
  //  bson_print_raw(stdout, bson_data(&_bson), 10);
     
-    THREADS_ALLOW();
-   if(havehints)
-      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, &_hints);
+   THREADS_ALLOW();
+
+    if(havehints)
+      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, orq, numorq, &_hints);
    else
-     q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, NULL, 0, NULL);
-   
-printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
+      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, orq, numorq, NULL);
+
       res = ejdbqryexecute(THISLC->coll, q1, &count, _flags, NULL);
- //   fprintf(stderr, "\n\nRecords found: %d\n", count);
+
    THREADS_DISALLOW();
 
-    pop_stack();
+   if (ejdbecode(getdb(THISLC->db)) == TCESUCCESS) {  
+    pop_n_elems(args);
 
     //Now print the result set records
     for (i = 0; i < TCLISTNUM(res); ++i) {
-    struct pike_string * bt;
+      struct pike_string * bt;
       char *bsdata = (char *)TCLISTVALPTR(res, i);
       // TODO: find a more efficient approach to this (as in, do we really need the length in order to make the pike_string?)
       bson_init_finished_data(&_bson, bsdata);
@@ -270,15 +291,31 @@ printf("coll: %p, %p, %p\n", getdb(THISLC->db), q1, THISLC->coll);
       bt = make_shared_binary_string(bson_data(&_bson), bson_size(&_bson));
       push_string(bt);
       }
-    fprintf(stderr, "\n");
-    f_aggregate(count);
-
+      f_aggregate(count);
+    }
+    else
+    {
+      // failure
+      tclistdel(res);
+      ejdbquerydel(q1);
+      if(orq)
+        free(orq);
+      
+      throw_ejdb_error(THISLC->db);
+   }
+   
     //Dispose result set
     tclistdel(res);
 
     //Dispose query
     ejdbquerydel(q1);
  //   bson_destroy(&_bson);
+     if(orq)
+     { 
+//       for(q=0; q < numorq; q++)
+//         bson_destroy(orq + q);
+     //  free(orq);
+     }
   }
   
   /*! @decl int begin_transaction()

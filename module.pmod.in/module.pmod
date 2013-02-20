@@ -62,7 +62,16 @@ class Collection
   array find(mapping query, array(mapping) orqueries, mapping|void hints)
   {
     mixed res;
-    res = low_find(Standards.BSON.to_document(query, 1), /*orqueries?Standards.BSON.to_document(orqueries, 1):0,*/ hints?Standards.BSON.to_document(hints, 1):0);
+    array borqueries;
+    
+    if(orqueries)
+    {
+      borqueries = allocate(sizeof(orqueries));
+      foreach(orqueries; int i; mapping q)
+        borqueries[i] = Standards.BSON.to_document(q, 1);  
+    }
+    
+    res = low_find(Standards.BSON.to_document(query, 1), borqueries, hints?Standards.BSON.to_document(hints, 1):0);
     foreach(res; int i; mixed e)
     {
       res[i] = Standards.BSON.from_document(e);
