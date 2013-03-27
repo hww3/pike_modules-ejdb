@@ -228,6 +228,8 @@ flags ID_PROTECTED;
     int havehints = 0;
     int numorq = 0;
     int q;
+    EJDB * dbo;
+    EJCOLL * coll;
     
     bson* orq = NULL;
     
@@ -236,7 +238,19 @@ flags ID_PROTECTED;
       pop_n_elems(args);
       Pike_error("Collection not initialized properly.\n");
     }
-    
+
+    if(!THISLC->db)    
+    {
+      pop_n_elems(args);
+      Pike_error("No db!\n");
+    }
+
+    if(!getdb(THISLC->db))
+    {
+      pop_n_elems(args);
+      Pike_error("No low db.\n");
+    }
+
     if(flags && flags->type == T_INT)
      {
        _flags = flags->u.integer;
@@ -253,7 +267,6 @@ flags ID_PROTECTED;
       {
         sv = ITEM(or_queries)+q;
         bson_init_finished_data(&(orq[q]), sv->u.string->str);
- //       bson_print_raw(stderr, bson_data(orq+q), 0);
         
       }
     }
@@ -264,22 +277,29 @@ flags ID_PROTECTED;
       bson_init_finished_data(&_hints, bson_hints->str);
       
     }    
- //  bson_print_raw(stdout, bson_data(&_bson), 10);
     
+   dbo = getdb(THISLC->db);
+   coll = THISLC->coll;
    THREADS_ALLOW();
 
     if(havehints)
-      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, orq, numorq, &_hints);
+      q1 = ejdbcreatequery(dbo, &_bson, orq, numorq, &_hints);
    else
-      q1 = ejdbcreatequery(getdb(THISLC->db), &_bson, orq, numorq, NULL);
+      q1 = ejdbcreatequery(dbo, &_bson, orq, numorq, NULL);
 
-      res = ejdbqryexecute(THISLC->coll, q1, &count, _flags, NULL);
+      res = ejdbqryexecute(coll, q1, &count, _flags, NULL);
 
    THREADS_DISALLOW();
 
-   if (ejdbecode(getdb(THISLC->db)) == TCESUCCESS) {  
+   if (ejdbecode(dbo) == TCESUCCESS) {  
     pop_n_elems(args);
 
+    if(_flags)
+    {
+      push_int(count);
+    }
+    else
+    {
     //Now print the result set records
     for (i = 0; i < TCLISTNUM(res); ++i) {
       struct pike_string * bt;
@@ -292,6 +312,14 @@ flags ID_PROTECTED;
       push_string(bt);
       }
       f_aggregate(count);
+
+    //Dispose result set
+    tclistdel(res);
+
+    //Dispose query
+    ejdbquerydel(q1);
+
+     }
     }
     else
     {
@@ -304,11 +332,6 @@ flags ID_PROTECTED;
       throw_ejdb_error(THISLC->db);
    }
    
-    //Dispose result set
-    tclistdel(res);
-
-    //Dispose query
-    ejdbquerydel(q1);
  //   bson_destroy(&_bson);
      if(orq)
      { 
@@ -769,11 +792,13 @@ EXIT
    EXIT;
  }
 
- EJDB * getdb(struct object * db)
+ EJDB * getdb(struct object * dbo)
  {
+    EJDB * db;
     struct Database_struct * _db;
-    _db = (OBJ2_DATABASE(db));
-    return _db->jb; 
+    _db = (OBJ2_DATABASE(dbo));
+    db = _db->jb;
+    return db; 
  }
 
  void throw_ejdb_error(struct object * db)

@@ -64,14 +64,25 @@ class Collection
     mixed res;
     array borqueries;
     
+//werror("find(%O, %O, %O)\n", query, orqueries, hints);
     if(orqueries)
     {
       borqueries = allocate(sizeof(orqueries));
       foreach(orqueries; int i; mapping q)
         borqueries[i] = Standards.BSON.to_document(q, 1);  
     }
-    
-    res = low_find(Standards.BSON.to_document(query, 1), borqueries, hints?Standards.BSON.to_document(hints, 1):0);
+    int countonly;
+    if(hints && hints["$onlycount"])
+    {
+//      hints = hints + ([]);
+//      m_delete(hints, "$onlycount");
+      countonly = 1;
+    }
+    res = low_find(Standards.BSON.to_document(query, 1), borqueries, hints?Standards.BSON.to_document(hints, 1):0, countonly);
+
+    if(countonly)
+      return res;
+
     foreach(res; int i; mixed e)
     {
       res[i] = Standards.BSON.from_document(e);
