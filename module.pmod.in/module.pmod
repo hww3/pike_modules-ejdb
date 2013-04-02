@@ -57,7 +57,13 @@ class Collection
     else 
       return 0;
   }
-  
+
+  //! 
+  int delete(Standards.BSON.ObjectId id)
+  {
+    return delete_bson((string)id);
+  }  
+
   //!
   array find(mapping query, array(mapping) orqueries, mapping|void hints)
   {
