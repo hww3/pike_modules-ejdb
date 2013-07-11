@@ -1,3 +1,8 @@
+Changes since version 1.2
+
+- Additional documentation
+- Updated to use accelerated BSON parsing in recent Pike 7.9.
+
 Changes since version 1.1
 
 - Better error handling.
