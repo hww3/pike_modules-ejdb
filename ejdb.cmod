@@ -566,11 +566,13 @@ PIKEFUN object get_collection(string name)
 }
 
 /*! @decl object create_collection(string name, mapping|void opts) 
-  *! OPTIONS:
-  *!large
-  *!compressed
-  *!records
-  *!cachcedrecords
+  *!@param name
+  *! name of the collection to create.
+  *!@param opts
+  *!large,
+  *!compressed,
+  *!records,
+  *!cachedrecords
   */
 PIKEFUN object create_collection(string name, mapping|void opts)
 {
