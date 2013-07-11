@@ -4,7 +4,7 @@ constant __version = "1.2";
 // if necessary, inherit the C language module here.
 inherit Database.___EJDB;
 
-//!
+//! Object representing a collection of records stored in an EJDB databsase.
 class Collection
 {
   inherit LowCollection;
@@ -42,30 +42,41 @@ class Collection
     }
     
     if(oid)
-      return save_bson(Standards.BSON.to_document(obj), oid, merge);
+      return save_bson(Standards.BSON.encode(obj), oid, merge);
     else
-      return save_bson(Standards.BSON.to_document(obj), UNDEFINED, merge);
+      return save_bson(Standards.BSON.encode(obj), UNDEFINED, merge);
   }
   
-  //!
-  int load(string oid)
+  //! Load a record from the current collection using the record's OID.
+  mapping|array load(string oid)
   {
     string ret = load_bson(oid);
 
     if(ret)
-      return Standards.BSON.from_document(ret);
+      return Standards.BSON.decode(ret);
     else 
       return 0;
   }
 
-  //! 
+  //! Remove a record from the current collection using the record's OID.
   int delete(Standards.BSON.ObjectId id)
   {
     return delete_bson((string)id);
   }  
 
+  //! Retrieve records from the current collection. For details of query syntax
+  //! and query hints, please see the relevant EJDB documentation.
   //!
-  array find(mapping query, array(mapping) orqueries, mapping|void hints)
+  //! @param query 
+  //!  a mapping specifying the set of fields to match.
+  //!
+  //! @param orqueries
+  //!  an array of additional field sets to match in an or-fashion.
+  //!
+  //! @param hints
+  //!  mapping containing query hints.
+  //!
+  array(mapping|array) find(mapping query, array(mapping) orqueries, mapping|void hints)
   {
     mixed res;
     array borqueries;
@@ -75,7 +86,7 @@ class Collection
     {
       borqueries = allocate(sizeof(orqueries));
       foreach(orqueries; int i; mapping q)
-        borqueries[i] = Standards.BSON.to_document(q, 1);  
+        borqueries[i] = Standards.BSON.encode(q, 1);  
     }
     int countonly;
     if(hints && hints["$onlycount"])
@@ -84,14 +95,14 @@ class Collection
 //      m_delete(hints, "$onlycount");
       countonly = 1;
     }
-    res = low_find(Standards.BSON.to_document(query, 1), borqueries, hints?Standards.BSON.to_document(hints, 1):0, countonly);
+    res = low_find(Standards.BSON.encode(query, 1), borqueries, hints?Standards.BSON.encode(hints, 1):0, countonly);
 
     if(countonly)
       return res;
 
     foreach(res; int i; mixed e)
     {
-      res[i] = Standards.BSON.from_document(e);
+      res[i] = Standards.BSON.decode(e);
     }
     return res;
   }
