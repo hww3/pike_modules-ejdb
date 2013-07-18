@@ -21,6 +21,8 @@ struct EJCOLL { /**> EJDB Collection. */
 #include <tcejdb/ejdb.h>
 #endif /* HAVE_TCEJDB/EJDB_H */
 
+#define THISLD ((struct LowDatabase_struct *)get_storage(Pike_fp->current_object, LowDatabase_program))
+
 extern struct program * EJDB_program;
 struct program * Collection_program;
 
@@ -445,7 +447,7 @@ flags ID_PROTECTED;
 
 /*! @class Database
  */
-PIKECLASS Database
+PIKECLASS LowDatabase
 {
 
 DECLARATIONS
@@ -477,8 +479,8 @@ PIKEFUN void create(string dbpath, int flags)
  */ 
 PIKEFUN int sync()
 {
-   if (!ejdbsyncdb(THIS->jb)) {
-       RETURN ejdbecode(THIS->jb);
+   if (!ejdbsyncdb(THISLD->jb) {
+       RETURN ejdbecode(THISLD->jb);
    }
    else RETURN 0;
 }
@@ -487,15 +489,15 @@ PIKEFUN int sync()
  */
 PIKEFUN int is_open()
 {
-   RETURN (ejdbisopen(THIS->jb));
+   RETURN (ejdbisopen(THISLD->jb));
 }
 
 /*! @decl int close()
  */
 PIKEFUN int close()
 {
-   if (!ejdbclose(THIS->jb)) {
-       RETURN ejdbecode(THIS->jb);
+   if (!ejdbclose(THISLD->jb)) {
+       RETURN ejdbecode(THISLD->jb);
    }
    else RETURN 0;
 }
@@ -510,7 +512,7 @@ PIKEFUN array delete_collection(string name, int unlink)
   ref_push_string(name);
   f_string_to_utf8(1);
 
-  ret = ejdbrmcoll(THIS->jb, Pike_sp[-1].u.string->str, unlink);
+  ret = ejdbrmcoll(THISLD->jb, Pike_sp[-1].u.string->str, unlink);
   pop_n_elems(args + 1);
   
   push_int(ret);
@@ -524,7 +526,7 @@ PIKEFUN array get_collections()
   int i;
   struct pike_string * cn;
 
-  colls = ejdbgetcolls(THIS->jb);
+  colls = ejdbgetcolls(THISLD->jb);
   
   for (i = 0; i < TCLISTNUM(colls); ++i) {
     EJCOLL *coll = (EJCOLL *)TCLISTVALPTR(colls, i);
@@ -548,7 +550,7 @@ PIKEFUN object get_collection(string name)
   ref_push_string(name);
   f_string_to_utf8(1);
 
-  coll = ejdbgetcoll(THIS->jb, (Pike_sp[-1].u.string->str));
+  coll = ejdbgetcoll(THISLD->jb, (Pike_sp[-1].u.string->str));
 
 //printf("coll: %p\n", coll);
   if(!coll)
@@ -615,7 +617,7 @@ PIKEFUN object create_collection(string name, mapping|void opts)
     }
   }
 
-  coll = ejdbcreatecoll(THIS->jb, (name->str), &_opts);
+  coll = ejdbcreatecoll(THISLD->jb, (name->str), &_opts);
   if(!coll)
   {
     pop_n_elems(args + 1);
@@ -629,6 +631,46 @@ PIKEFUN object create_collection(string name, mapping|void opts)
     return;
   }
 }
+
+#ifdef HAVE_EJDBCOMMAND
+
+  /*! @decl array low_command(string bson)
+   */
+  PIKEFUN array low_command(string bson)
+  {
+    bson _bson;
+    bson *res; 
+    EJDB * dbo;
+    struct pike_string * bt;
+
+    if(!THISLD->db)
+    {
+      pop_n_elems(args);
+      Pike_error("No db!\n");
+    }
+    
+    dbo = THISLD->db;
+    bson_init_finished_data(&_bson, bson->str);
+
+    THREADS_ALLOW();
+
+    res = ejdbcommand(dbo, _bson);
+
+    THREADS_DISALLOW();
+
+    bt = make_shared_binary_string(bson_data(&res), bson_size(&res));
+    pop_stack();
+    push_string(bt);
+    bson_del(res);
+ }
+
+#else
+  PIKEFUN array low_command(string bson)
+  {
+    pop_stack();
+    Pike_error("low_command() is not available. please upgrade your ejdb library.\n");
+  }  
+#endif /* HAVE_EJDBCOMMAND */
 
 #define OBJ2_COLLECTION(X) ((struct LowCollection_struct *)get_storage(X, LowCollection_program))
 
@@ -783,6 +825,29 @@ EXIT
     *! Query only count(*) in find()
     */
    add_integer_constant("JBQRYCOUNT", JBQRYCOUNT, 0);
+
+  /* COMMAND CONSTANTS */
+
+   /*! @decl constant JBJSONEXPORT
+    *!
+    *! Export data as JSON files instead exporting into BSONs.
+    */
+  add_integer_constant("JBJSONEXPORT", JBJSONEXPORT, 0);
+
+   /*! @decl constant JBIMPORTUPDATE
+    *!
+    *! Update existing collection entries with imported ones.
+    *! Existing collections will not be recreated.
+    *! For existing collections options will not be imported.
+    */
+  add_integer_constant("JBIMPORTUPDATE", JBIMPORTUPDATE, 0);
+
+   /*! @decl constant JBIMPORTREPLACE
+    *! Recreate existing collections and replace all their data
+    *! with imported entries. Collections options will be imported.
+    *!
+    */
+  add_integer_constant("JBIMPORTREPLACE", JBIMPORTREPLACE, 0);
  }
  PIKE_MODULE_INIT
  {
@@ -797,8 +862,8 @@ EXIT
  EJDB * getdb(struct object * dbo)
  {
     EJDB * db;
-    struct Database_struct * _db;
-    _db = (OBJ2_DATABASE(dbo));
+    struct LowDatabase_struct * _db;
+    _db = (OBJ2_LOWDATABASE(dbo));
     db = _db->jb;
     return db; 
  }

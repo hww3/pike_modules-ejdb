@@ -106,4 +106,28 @@ class Collection
     }
     return res;
   }
+
+  //! execute a command against an EJDB database.
+  mapping command(mapping cmd)
+  {
+    string res;
+    res = low_command(Standards.BSON.encode(cmd));
+
+    return Standards.BSON.decode(res);
+  }
+}
+
+class Database
+{
+  inherit LowDatabase;
+
+   //! execute a command against an EJDB database.
+   mapping command(mapping cmd)
+   {
+     string res;
+     res = low_command(Standards.BSON.encode(cmd));
+
+     return Standards.BSON.decode(res);
+   }
+
 }

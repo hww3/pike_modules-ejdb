@@ -14,8 +14,8 @@ CMOD_FLAGS="$CPPFLAGS"
 
 AC_CHECK_HEADERS(tcejdb/ejdb.h)
 # AC_CHECK_LIB(xml2, xmlCleanupParser) 
-
 # AC_CHECK_FUNCS(xmlNewDocPI) 
+AC_CHECK_FUNCS(ejdbcommand)
 
 AC_SUBST(CMOD_CFLAGS) 
 AC_SUBST(CMOD_LIBS)
