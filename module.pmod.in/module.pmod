@@ -2,7 +2,7 @@ constant __author = "Bill Welliver <bill@welliver.org>";
 constant __version = "1.2";
 
 // if necessary, inherit the C language module here.
-inherit Database.___EJDB;
+inherit global.Database.___EJDB;
 
 //! Object representing a collection of records stored in an EJDB databsase.
 class Collection
@@ -107,14 +107,6 @@ class Collection
     return res;
   }
 
-  //! execute a command against an EJDB database.
-  mapping command(mapping cmd)
-  {
-    string res;
-    res = low_command(Standards.BSON.encode(cmd));
-
-    return Standards.BSON.decode(res);
-  }
 }
 
 class Database

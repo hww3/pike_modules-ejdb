@@ -21,8 +21,6 @@ struct EJCOLL { /**> EJDB Collection. */
 #include <tcejdb/ejdb.h>
 #endif /* HAVE_TCEJDB/EJDB_H */
 
-#define THISLD ((struct LowDatabase_struct *)get_storage(Pike_fp->current_object, LowDatabase_program))
-
 extern struct program * EJDB_program;
 struct program * Collection_program;
 
@@ -450,7 +448,11 @@ flags ID_PROTECTED;
 PIKECLASS LowDatabase
 {
 
+
 DECLARATIONS
+
+#define THISLD ((struct LowDatabase_struct *)get_storage(Pike_fp->current_object, LowDatabase_program))
+
 CVAR EJDB * jb;
 
 /*! @decl void create(string dbpath, int flags)
@@ -633,35 +635,45 @@ PIKEFUN object create_collection(string name, mapping|void opts)
 }
 
 
-  /*! @decl array low_command(string bson)
+  /*! @decl string low_command(string bson)
+   *!
    */
-  PIKEFUN array low_command(string bson)
+  PIKEFUN string low_command(string bson_cmd)
   {
-#ifdef HAVE_EJDBCOMMAND
     bson _bson;
+
     bson *res; 
     EJDB * dbo;
     struct pike_string * bt;
 
-    if(!THISLD->db)
+#ifdef HAVE_EJDBCOMMAND
+
+    if(!THISLD->jb)
     {
       pop_n_elems(args);
       Pike_error("No db!\n");
     }
     
-    dbo = THISLD->db;
-    bson_init_finished_data(&_bson, bson->str);
+    dbo = THISLD->jb;
+    bson_init_finished_data(&_bson, bson_cmd->str);
 
     THREADS_ALLOW();
 
-    res = ejdbcommand(dbo, _bson);
+    res = ejdbcommand(dbo, &_bson);
 
     THREADS_DISALLOW();
-
-    bt = make_shared_binary_string(bson_data(&res), bson_size(&res));
     pop_stack();
-    push_string(bt);
-    bson_del(res);
+
+    if(res)
+    {
+      bt = make_shared_binary_string(bson_data(res), bson_size(res));
+      push_string(bt);
+      bson_del(res);
+    }
+    else
+    {
+      push_int(0);
+    }
 #else
     pop_stack();
     Pike_error("low_command() is not available. please upgrade your ejdb library.\n");
