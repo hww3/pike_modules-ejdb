@@ -4,8 +4,13 @@ AC_INIT(ejdb_config.h.in)
 AC_MODULE_INIT()
 AC_CONFIG_HEADERS(ejdb_config.h)
 
+if [ `uname -x` = "Windows_XP" ] ; then
+EJDB_LIBS="-ltcejdbdll"
+else
 EJDB_LIBS=`pkg-config --libs tcejdb`
 EJDB_CFLAGS=`pkg-config --cflags tcejdb`
+fi
+
 CPPFLAGS="${CPPFLAGS} ${EJDB_CFLAGS}"
 LDFLAGS="${LDFLAGS} ${EJDB_LIBS}"
 

@@ -1,6 +1,12 @@
 constant __author = "Bill Welliver <bill@welliver.org>";
 constant __version = "1.2";
 
+#if constant(Standards.BSON)
+import Standards.BSON;
+#else
+import .support;
+#endif
+
 // if necessary, inherit the C language module here.
 inherit global.Database.___EJDB;
 
@@ -42,9 +48,9 @@ class Collection
     }
     
     if(oid)
-      return save_bson(Standards.BSON.encode(obj), oid, merge);
+      return save_bson(encode(obj), oid, merge);
     else
-      return save_bson(Standards.BSON.encode(obj), UNDEFINED, merge);
+      return save_bson(encode(obj), UNDEFINED, merge);
   }
   
   //! Load a record from the current collection using the record's OID.
@@ -53,13 +59,13 @@ class Collection
     string ret = load_bson(oid);
 
     if(ret)
-      return Standards.BSON.decode(ret);
+      return decode(ret);
     else 
       return 0;
   }
 
   //! Remove a record from the current collection using the record's OID.
-  int delete(Standards.BSON.ObjectId id)
+  int delete(ObjectId id)
   {
     return delete_bson((string)id);
   }  
@@ -86,7 +92,7 @@ class Collection
     {
       borqueries = allocate(sizeof(orqueries));
       foreach(orqueries; int i; mapping q)
-        borqueries[i] = Standards.BSON.encode(q, 1);  
+        borqueries[i] = encode(q, 1);  
     }
     int countonly;
     if(hints && hints["$onlycount"])
@@ -95,14 +101,14 @@ class Collection
 //      m_delete(hints, "$onlycount");
       countonly = 1;
     }
-    res = low_find(Standards.BSON.encode(query, 1), borqueries, hints?Standards.BSON.encode(hints, 1):0, countonly);
+    res = low_find(encode(query, 1), borqueries, hints?encode(hints, 1):0, countonly);
 
     if(countonly)
       return res;
 
     foreach(res; int i; mixed e)
     {
-      res[i] = Standards.BSON.decode(e);
+      res[i] = decode(e);
     }
     return res;
   }
@@ -117,9 +123,9 @@ class Database
    mapping command(mapping cmd)
    {
      string res;
-     res = low_command(Standards.BSON.encode(cmd));
+     res = low_command(encode(cmd));
 
-     return Standards.BSON.decode(res);
+     return decode(res);
    }
 
 }
