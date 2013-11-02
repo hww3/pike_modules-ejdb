@@ -5,7 +5,7 @@ AC_MODULE_INIT()
 AC_CONFIG_HEADERS(ejdb_config.h)
 
 if [ `uname -x` = "Windows_XP" ] ; then
-EJDB_LIBS="-ltcejdbdll"
+EJDB_LIBS="-ltcejdbdll -lbson"
 else
 EJDB_LIBS=`pkg-config --libs tcejdb`
 EJDB_CFLAGS=`pkg-config --cflags tcejdb`
@@ -18,8 +18,6 @@ CMOD_LIBS="$LDFLAGS"
 CMOD_FLAGS="$CPPFLAGS"
 
 AC_CHECK_HEADERS(tcejdb/ejdb.h)
-# AC_CHECK_LIB(xml2, xmlCleanupParser) 
-# AC_CHECK_FUNCS(xmlNewDocPI) 
 AC_CHECK_FUNCS(ejdbcommand)
 
 AC_SUBST(CMOD_CFLAGS) 
