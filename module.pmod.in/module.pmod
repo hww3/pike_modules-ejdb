@@ -1,5 +1,5 @@
 constant __author = "Bill Welliver <bill@welliver.org>";
-constant __version = "1.2";
+constant __version = "1.5";
 
 #if constant(Standards.BSON)
 import Standards.BSON;
