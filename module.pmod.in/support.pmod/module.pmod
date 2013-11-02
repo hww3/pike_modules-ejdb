@@ -196,7 +196,7 @@ mixed fromDocument(string bson)
   do
   {
     slist = decode_next_value(slist, list);
-werror("sizeof: %O\n", sizeof(slist));
+//werror("sizeof: %O\n", sizeof(slist));
 //werror("read item: %O, left: %O", list, slist);
   } while(sizeof(slist));
   
@@ -218,7 +218,7 @@ mixed decode(string bson)
   do
   {
     slist = decode_next_value(slist, list);
-werror("sizeof: %O\n", sizeof(slist));
+//werror("sizeof: %O\n", sizeof(slist));
 //werror("read item: %O, left: %O", list, slist);
   } while(sizeof(slist));
   
@@ -273,7 +273,7 @@ static string decode_next_value(string slist, mapping list)
 
   key = utf8_to_string(key);
 
-werror("key: %s type: %d\n", key, type);
+//werror("key: %s type: %d\n", key, type);
   switch(type)
   {
      int len, subtype;
@@ -369,7 +369,7 @@ werror("key: %s type: %d\n", key, type);
        	 throw(Error.Generic("Unable to read embedded document length\n"));
        if(!sscanf(slist, "%" + (doclen) + "s%s", document, slist))
        	 throw(Error.Generic("Unable to read specified length for embedded document.\n"));
-werror("document: %O\n", document);
+//werror("document: %O\n", document);
        value = fromDocument(document);
        break;
      case TYPE_ARRAY:
