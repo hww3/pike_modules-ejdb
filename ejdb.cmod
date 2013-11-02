@@ -187,23 +187,32 @@ flags ID_PROTECTED;
     {
       _merge = merge->u.integer;
     }
+    //printf("initializing bson!\n");
 
     bson_init_finished_data(&_bson, bsonval->str);
  //   bson_print_raw(stdout, bson_data(&_bson), 10);
-    
+    //printf("about to save bson!\n");
     if(ejdbsavebson2(THISLC->coll, &_bson, &_oid, merge))
     {
       struct pike_string * oidStr;
-      char c[24];
+      char c[25];
+      //printf("success!\n");
       bson_oid_to_string((const bson_oid_t *)&_oid, (char *)&c);
-
+      //printf("making string %d.\n", strlen(c));
+      //printf("making string %s.\n", c);
       oidStr = make_shared_binary_string(c, strlen(c));
+      //printf("done.\n");
+      //printf("popping.\n");
       //bson_destroy(&_bson);
-      RETURN oidStr;
+      pop_n_elems(args);
+      //printf("popped.\n");
+      push_string(oidStr);
     }
     else
     {
-          int ecode = ejdbecode(getdb(THISLC->db)); 
+          int ecode;
+	printf("failure!\n");
+	  ecode = ejdbecode(getdb(THISLC->db)); 
           if (ecode != TCESUCCESS) {
             pop_stack();
               throw_ejdb_error(THISLC->db);
@@ -211,7 +220,6 @@ flags ID_PROTECTED;
     
       RETURN 0;
     }
-
   }
 
   /*! @decl array low_find(string bson_query)
@@ -327,7 +335,7 @@ flags ID_PROTECTED;
       tclistdel(res);
       ejdbquerydel(q1);
       if(orq)
-        free(orq);
+        bson_free(orq);
       
       throw_ejdb_error(THISLC->db);
    }
